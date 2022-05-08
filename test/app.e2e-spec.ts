@@ -69,6 +69,7 @@ describe('Commission Calculator API', () => {
     })
       .expect(201)
       .expect({
+        // TODO: ask if it's OK to include just 1 decimal place
         amount: '0.5',
         currency: 'EUR',
       });

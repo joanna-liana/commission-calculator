@@ -5,6 +5,7 @@ export type ClientCommissionPolicy = (
   client: ITransactionClient,
 ) => Euro | null;
 
+// TODO: name to be consulted with the business
 export const VIPCommissionPolicy = (client: ITransactionClient) =>
   client.isVIP ? Euro.of(0.05) : null;
 
