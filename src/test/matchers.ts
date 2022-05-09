@@ -15,7 +15,7 @@ expect.extend({
     const message: () => string = () =>
       pass
         ? ''
-        : `Received money ( ${received.currency} ${received.amount}) is not the same as expected (${expected.currency} ${expected.amount})`;
+        : `Received money (${received.currency} ${received.amount}) is not the same as expected (${expected.currency} ${expected.amount})`;
 
     return {
       message,
