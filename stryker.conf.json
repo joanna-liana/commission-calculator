@@ -11,6 +11,7 @@
   "testRunner": "jest",
   "coverageAnalysis": "perTest",
   "mutate": [
-    "src/**/*/calculate-commission.usecase.ts"
+    "src/**/*/calculate-commission.usecase.ts",
+    "src/**/*/commission-calculator.ts"
   ]
 }
