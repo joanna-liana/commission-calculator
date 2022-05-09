@@ -3,10 +3,10 @@ import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from './../src/app.module';
 import { CommissionRequestDto } from 'src/commission/application/rest/requests/commission-request.dto';
-import { Currency } from '../src/commission/domain/money/Currency';
 import { TRANSACTION_CLIENT_REPOSITORY } from '../src/commission/injection-tokens';
+import { sampleClient } from '../src/test/fixtures';
 import { ITransactionClientRepository } from '../src/commission/domain/transaction-client/transaction-client-repository.interface';
-import { sampleClient } from './fixtures';
+import { Currency } from '../src/commission/domain/money/Currency';
 
 describe('Commission Calculator API', () => {
   const REGULAR_CLIENT_ID = 1;

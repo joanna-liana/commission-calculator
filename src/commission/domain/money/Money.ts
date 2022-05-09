@@ -39,4 +39,11 @@ export class Money {
   get currency(): Currency {
     return this.#currency;
   }
+
+  equals(anotherMoney: Money): boolean {
+    return (
+      this.currency === anotherMoney.currency &&
+      this.amount === anotherMoney.amount
+    );
+  }
 }

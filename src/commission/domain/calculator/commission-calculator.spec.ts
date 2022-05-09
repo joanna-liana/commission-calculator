@@ -1,4 +1,4 @@
-import { sampleClient } from '../../../../test/fixtures';
+import { sampleClient } from '../../../test/fixtures';
 import { InMemoryClientRepository } from '../../application/transaction-client/in-memory-client-repository';
 import { Euro } from '../money/Euro';
 import { ITransactionClient } from '../transaction-client/ITransactionClient';
@@ -37,7 +37,7 @@ describe('Commission calculator', () => {
         money: Euro.of(input),
       });
 
-      expect(await calculator.getCommission(params)).toStrictEqual(
+      expect(await calculator.getCommission(params)).toBeSameMoney(
         Euro.of(output),
       );
     });
@@ -47,7 +47,7 @@ describe('Commission calculator', () => {
         money: Euro.of(1000),
       });
 
-      expect(await calculator.getCommission(params)).toStrictEqual(Euro.of(5));
+      expect(await calculator.getCommission(params)).toBeSameMoney(Euro.of(5));
     });
   });
 
@@ -68,7 +68,7 @@ describe('Commission calculator', () => {
 
       await clientRepository.save(vipClient);
 
-      expect(await calculator.getCommission(params)).toStrictEqual(
+      expect(await calculator.getCommission(params)).toBeSameMoney(
         Euro.of(0.05),
       );
     });
@@ -88,13 +88,12 @@ describe('Commission calculator', () => {
 
         await clientRepository.save(highTurnoverClient);
 
-        expect(await calculator.getCommission(params)).toStrictEqual(
+        expect(await calculator.getCommission(params)).toBeSameMoney(
           Euro.of(0.03),
         );
       },
     );
 
-    // TODO: parametrised test
     it.each([
       [
         Euro.of(10),
@@ -133,7 +132,7 @@ describe('Commission calculator', () => {
               money: input,
             }),
           ),
-        ).toStrictEqual(output);
+        ).toBeSameMoney(output);
       },
     );
   });
