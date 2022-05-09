@@ -2,7 +2,7 @@ import { ITransactionClient } from '../transaction-client/ITransactionClient';
 import { Euro } from '../money/Euro';
 import {
   ClientCommissionPolicy,
-  TurnoverCommissionPolicy,
+  HighTurnoverCommissionPolicy,
   VIPCommissionPolicy,
 } from './policies';
 import { Optional } from '@nestjs/common';
@@ -11,7 +11,7 @@ export class CommissionCalculator {
   constructor(
     @Optional()
     private readonly policies: ClientCommissionPolicy[] = [
-      TurnoverCommissionPolicy,
+      HighTurnoverCommissionPolicy,
       VIPCommissionPolicy,
     ],
   ) {}
@@ -26,7 +26,7 @@ export class CommissionCalculator {
   }
 
   private calculateDefaultCommission(money: Euro): Euro {
-    const baseCommission = (0.5 / 100) * money.amount;
+    const baseCommission = (0.5 / 100) * money.amount; /* ? */
 
     return Euro.of(baseCommission > 0.5 ? baseCommission : 0.5);
   }
