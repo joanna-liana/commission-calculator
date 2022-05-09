@@ -3,7 +3,7 @@ import { Euro } from '../src/commission/domain/money/Euro';
 
 export const sampleClient = (
   props: Partial<
-    Omit<ITransactionClient, 'monthlyTurnover'> & { monthlyTurnover: number; }
+    Omit<ITransactionClient, 'monthlyTurnover'> & { monthlyTurnover: number }
   >,
 ): ITransactionClient => ({
   id: props?.id ?? 1,
