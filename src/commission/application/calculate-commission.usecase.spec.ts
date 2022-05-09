@@ -93,7 +93,7 @@ describe('Calculate commission', () => {
         money: Money.of(10000, Currency.USD),
       });
 
-      expect(result).toStrictEqual(Euro.of(250));
+      expect(result).toBeSameMoney(Euro.of(250));
     });
   });
 
@@ -135,7 +135,7 @@ describe('Calculate commission', () => {
       });
 
       //
-      expect(result).toStrictEqual(Euro.of(0.05));
+      expect(result).toBeSameMoney(Euro.of(0.05));
     });
   });
 });
