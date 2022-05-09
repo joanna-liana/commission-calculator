@@ -9,7 +9,7 @@ import { ITransactionClientFactory } from '../domain/transaction-client/transact
 import { ITransactionClient } from '../domain/transaction-client/ITransactionClient';
 import { Money } from '../domain/money/Money';
 import { Currency } from '../domain/money/Currency';
-import { sampleClient } from '../../../test/fixtures';
+import { sampleClient } from '../../test/fixtures';
 import { Euro } from '../domain/money/Euro';
 
 describe('Calculate commission', () => {
@@ -67,15 +67,16 @@ describe('Calculate commission', () => {
         money: Money.of(100, Currency.EUR),
       });
 
-      expect(result).toStrictEqual(Euro.of(0.5));
+      expect(result).toEqual(Euro.of(250));
+      expect(result.equals(Euro.of(0.5))).toBeTruthy();
     });
 
     it('for non-EUR transactions', async () => {
       const result = await executeUseCase({
-        money: Money.of(100, Currency.USD),
+        money: Money.of(10000, Currency.USD),
       });
 
-      expect(result).toStrictEqual(Euro.of(2.5));
+      expect(result).toStrictEqual(Euro.of(250));
     });
   });
 
@@ -97,7 +98,7 @@ describe('Calculate commission', () => {
       });
 
       // then
-      expect(result).toStrictEqual(Euro.of(0.03));
+      expect(result).toBeSameMoney(Euro.of(0.03));
     });
 
     it.each([
