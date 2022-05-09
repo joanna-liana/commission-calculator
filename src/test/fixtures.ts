@@ -1,5 +1,5 @@
 import { ITransactionClient } from 'src/commission/domain/transaction-client/ITransactionClient';
-import { Euro } from '../src/commission/domain/money/Euro';
+import { Euro } from '../commission/domain/money/Euro';
 
 export const sampleClient = (
   props: Partial<
