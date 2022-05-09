@@ -11,6 +11,11 @@ import { Money } from '../domain/money/Money';
 import { Currency } from '../domain/money/Currency';
 import { sampleClient } from '../../../test/fixtures';
 import { Euro } from '../domain/money/Euro';
+import { CommissionPolicy } from '../domain/calculator/policies/commission-policy';
+import { HighTurnoverPolicy } from '../domain/calculator/policies/high-turnover.policy';
+import { VIPPolicy } from '../domain/calculator/policies/vip.policy';
+import { TRANSACTION_CLIENT_REPOSITORY } from '../injection-tokens';
+import { InMemoryClientRepository } from './transaction-client/in-memory-client-repository';
 
 describe('Calculate commission', () => {
   const NON_EUR_EXCHANGE_RATE = 5;
@@ -25,6 +30,16 @@ describe('Calculate commission', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
+        {
+          provide: CommissionCalculator,
+          useFactory: (
+            highTurnoverPolicy: CommissionPolicy,
+            vipPolicy: CommissionPolicy,
+          ) => {
+            return new CommissionCalculator([highTurnoverPolicy, vipPolicy]);
+          },
+          inject: [HighTurnoverPolicy, VIPPolicy],
+        },
         CalculateCommissionUseCase,
         CommissionCalculator,
         {
@@ -32,9 +47,11 @@ describe('Calculate commission', () => {
           useValue: new InMemoryRatesExchangeApiService(NON_EUR_EXCHANGE_RATE),
         },
         {
-          provide: 'CLIENT_FACTORY',
-          useValue: clientFactoryStub,
+          provide: TRANSACTION_CLIENT_REPOSITORY,
+          useClass: InMemoryClientRepository,
         },
+        HighTurnoverPolicy,
+        VIPPolicy,
       ],
     }).compile();
 
