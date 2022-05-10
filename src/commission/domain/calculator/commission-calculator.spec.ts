@@ -94,7 +94,28 @@ describe('Commission calculator', () => {
       },
     );
 
+    // TODO: property-based test
     it.each([
+      [
+        Euro.of(99.9),
+        sampleClient({ isVIP: false, monthlyTurnover: 100 }),
+        Euro.of(0.5),
+      ],
+      [
+        Euro.of(100),
+        sampleClient({ isVIP: false, monthlyTurnover: 100 }),
+        Euro.of(0.5),
+      ],
+      [
+        Euro.of(120),
+        sampleClient({ isVIP: false, monthlyTurnover: 100 }),
+        Euro.of(0.6),
+      ],
+      [
+        Euro.of(1.1),
+        sampleClient({ isVIP: false, monthlyTurnover: 100 }),
+        Euro.of(0.5),
+      ],
       [
         Euro.of(10),
         sampleClient({ isVIP: true, monthlyTurnover: 10001 }),
@@ -118,7 +139,6 @@ describe('Commission calculator', () => {
     ])(
       'given multiple rules, it returns the lowest commission',
       async (input, client, output) => {
-        // TODO: test different rules order
         const calculator = new CommissionCalculator([
           new VIPPolicy(clientRepository),
           new HighTurnoverPolicy(clientRepository),
@@ -133,6 +153,46 @@ describe('Commission calculator', () => {
             }),
           ),
         ).toBeSameMoney(output);
+      },
+    );
+
+    it.each([
+      [
+        [
+          new VIPPolicy(clientRepository),
+          new HighTurnoverPolicy(clientRepository),
+        ],
+      ],
+      [
+        [
+          new HighTurnoverPolicy(clientRepository),
+          new VIPPolicy(clientRepository),
+        ],
+      ],
+    ])(
+      'given multiple rules in any order, it returns the lowest commission',
+      async (rules) => {
+        // given
+        const calculator = new CommissionCalculator(rules);
+
+        const lowestCommission = Euro.of(0.03);
+
+        const lowestCommissionClient = sampleClient({
+          isVIP: true,
+          monthlyTurnover: 100000,
+        });
+
+        await clientRepository.save(lowestCommissionClient);
+
+        // when
+        const commission = await calculator.getCommission(
+          getParams({
+            money: Euro.of(10),
+          }),
+        );
+
+        // then
+        expect(commission).toBeSameMoney(lowestCommission);
       },
     );
   });
