@@ -11,6 +11,8 @@ export class CommissionCalculator {
       this.policies.map((p) => p.applyTo(params)),
     );
 
+    this.policies; /* ? */
+
     const commissions = policyResults.filter(
       (commission) => commission !== null,
     );
