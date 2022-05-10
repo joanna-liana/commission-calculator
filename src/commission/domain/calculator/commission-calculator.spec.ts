@@ -1,3 +1,5 @@
+import fc from 'fast-check';
+
 import { sampleClient } from '../../../test/fixtures';
 import { Euro } from '../money/Euro';
 import { ITransactionClient } from '../transaction-client/ITransactionClient';
@@ -102,13 +104,33 @@ describe('Commission calculator', () => {
     ])(
       'given multiple rules, it returns the lowest commission',
       (input, client, output) => {
-        // TODO: test different rules order
         const calculator = new CommissionCalculator([
           VIPCommissionPolicy,
           HighTurnoverCommissionPolicy,
         ]);
 
         expect(calculator.getCommission(input, client)).toBeSameMoney(output);
+      },
+    );
+
+    it.each([
+      [[VIPCommissionPolicy, HighTurnoverCommissionPolicy]],
+      [[HighTurnoverCommissionPolicy, VIPCommissionPolicy]],
+    ])(
+      'given multiple rules in any order, it returns the lowest commission',
+      (rules) => {
+        const calculator = new CommissionCalculator(rules);
+
+        const lowestCommission = Euro.of(0.03);
+
+        const lowestCommissionClient = sampleClient({
+          isVIP: true,
+          monthlyTurnover: 100000,
+        });
+
+        expect(
+          calculator.getCommission(Euro.of(10), lowestCommissionClient),
+        ).toBeSameMoney(lowestCommission);
       },
     );
   });
