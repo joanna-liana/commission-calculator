@@ -21,7 +21,7 @@ export class CommissionCalculator {
   }
 
   private calculateDefaultCommission(money: Euro): Euro {
-    const baseCommission = (0.5 / 100) * money.amount; /* ? */
+    const baseCommission = (0.5 / 100) * money.amount;
 
     return Euro.of(baseCommission > 0.5 ? baseCommission : 0.5);
   }
