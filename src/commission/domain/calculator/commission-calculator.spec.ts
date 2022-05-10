@@ -57,7 +57,28 @@ describe('Commission calculator', () => {
       },
     );
 
+    // TODO: property-based test
     it.each([
+      [
+        Euro.of(99.9),
+        sampleClient({ isVIP: false, monthlyTurnover: 100 }),
+        Euro.of(0.5),
+      ],
+      [
+        Euro.of(100),
+        sampleClient({ isVIP: false, monthlyTurnover: 100 }),
+        Euro.of(0.5),
+      ],
+      [
+        Euro.of(120),
+        sampleClient({ isVIP: false, monthlyTurnover: 100 }),
+        Euro.of(0.6),
+      ],
+      [
+        Euro.of(1.1),
+        sampleClient({ isVIP: false, monthlyTurnover: 100 }),
+        Euro.of(0.5),
+      ],
       [
         Euro.of(10),
         sampleClient({ isVIP: true, monthlyTurnover: 10001 }),
