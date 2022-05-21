@@ -10,7 +10,7 @@ import { Money } from '../domain/money/Money';
 import { Currency } from '../domain/money/Currency';
 import { sampleClient } from '../../test/fixtures';
 import { Euro } from '../domain/money/Euro';
-import { CommissionPolicy } from '../domain/calculator/policies/commission-policy';
+import { CommissionPolicy } from '../domain/calculator/policies/discounts/commission-policy';
 import { HighTurnoverPolicy } from '../domain/calculator/policies/high-turnover.policy';
 import { VIPPolicy } from '../domain/calculator/policies/vip.policy';
 import { TRANSACTION_CLIENT_REPOSITORY } from '../injection-tokens';

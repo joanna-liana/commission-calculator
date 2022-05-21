@@ -3,12 +3,13 @@ import { InMemoryClientRepository } from '../../application/transaction-client/i
 import { Euro } from '../money/Euro';
 import { ITransactionClient } from '../transaction-client/ITransactionClient';
 import { CommissionCalculator } from './commission-calculator';
+import { DEFAULT_POLICY } from './policies/default.policy';
 import {
   DefaultPolicy,
   ICommissionPolicyParams,
-} from './policies/commission-policy';
-import { HighTurnoverPolicy } from './policies/high-turnover.policy';
-import { VIPPolicy } from './policies/vip.policy';
+} from './policies/discounts/commission-policy';
+import { HighTurnoverPolicy } from './policies/discounts/high-turnover.policy';
+import { VIPPolicy } from './policies/discounts/vip.policy';
 
 const DEFAULT_CLIENT: ITransactionClient = sampleClient({
   isVIP: false,
@@ -21,12 +22,6 @@ const DEFAULT_PARAMS: ICommissionPolicyParams = {
   money: Euro.of(0),
 };
 
-const DEFAULT_POLICY: DefaultPolicy = {
-  applyTo() {
-    return Promise.resolve(Euro.of(0.05));
-  },
-};
-
 const getParams = (customParams: Partial<ICommissionPolicyParams> = {}) => ({
   ...DEFAULT_PARAMS,
   ...customParams,
@@ -36,7 +31,7 @@ describe('Commission calculator', () => {
   const clientRepository = new InMemoryClientRepository();
 
   describe('Base commission', () => {
-    const calculator = new CommissionCalculator();
+    const calculator = new CommissionCalculator(DEFAULT_POLICY);
 
     it.each([
       [100, 0.5],
@@ -66,7 +61,7 @@ describe('Commission calculator', () => {
     });
 
     it('returns a set commission of `0.05€` for VIP clients', async () => {
-      const calculator = new CommissionCalculator([
+      const calculator = new CommissionCalculator(DEFAULT_POLICY, [
         new VIPPolicy(clientRepository),
       ]);
 
@@ -85,7 +80,7 @@ describe('Commission calculator', () => {
     it.each([1000, 1001])(
       'returns `0.03€` for high turnover clients - `1000.00€` (per month)',
       async (turnover) => {
-        const calculator = new CommissionCalculator([
+        const calculator = new CommissionCalculator(DEFAULT_POLICY, [
           new HighTurnoverPolicy(clientRepository),
         ]);
 
@@ -148,7 +143,7 @@ describe('Commission calculator', () => {
     ])(
       'given multiple rules, it returns the lowest commission',
       async (input, client, output) => {
-        const calculator = new CommissionCalculator([
+        const calculator = new CommissionCalculator(DEFAULT_POLICY, [
           new VIPPolicy(clientRepository),
           new HighTurnoverPolicy(clientRepository),
         ]);
@@ -179,10 +174,10 @@ describe('Commission calculator', () => {
         ],
       ],
     ])(
-      'given multiple rules in any order, it returns the lowest commission',
-      async (rules) => {
+      'given multiple polcies in any order, it returns the lowest commission',
+      async (policies) => {
         // given
-        const calculator = new CommissionCalculator(rules);
+        const calculator = new CommissionCalculator(DEFAULT_POLICY, policies);
 
         const lowestCommission = Euro.of(0.03);
 
@@ -215,13 +210,10 @@ describe('Commission calculator', () => {
         },
       };
 
-      const calculator = new CommissionCalculator(
-        [
-          new HighTurnoverPolicy(clientRepository),
-          new VIPPolicy(clientRepository),
-        ],
-        defaultPolicy,
-      );
+      const calculator = new CommissionCalculator(defaultPolicy, [
+        new HighTurnoverPolicy(clientRepository),
+        new VIPPolicy(clientRepository),
+      ]);
 
       // when
       const commission = await calculator.getCommission(
@@ -242,14 +234,11 @@ describe('Commission calculator', () => {
         },
       };
 
-      const calculator = new CommissionCalculator(
-        [
-          new HighTurnoverPolicy(clientRepository),
-          new VIPPolicy(clientRepository),
-          zeroPolicy,
-        ],
-        DEFAULT_POLICY,
-      );
+      const calculator = new CommissionCalculator(DEFAULT_POLICY, [
+        new HighTurnoverPolicy(clientRepository),
+        new VIPPolicy(clientRepository),
+        zeroPolicy,
+      ]);
 
       // when
       const commission = await calculator.getCommission(
