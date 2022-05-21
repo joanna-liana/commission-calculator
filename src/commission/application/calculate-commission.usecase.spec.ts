@@ -11,11 +11,12 @@ import { Currency } from '../domain/money/Currency';
 import { sampleClient } from '../../test/fixtures';
 import { Euro } from '../domain/money/Euro';
 import { CommissionPolicy } from '../domain/calculator/policies/discounts/commission-policy';
-import { HighTurnoverPolicy } from '../domain/calculator/policies/high-turnover.policy';
-import { VIPPolicy } from '../domain/calculator/policies/vip.policy';
+import { HighTurnoverPolicy } from '../domain/calculator/policies/discounts/high-turnover.policy';
+import { VIPPolicy } from '../domain/calculator/policies/discounts/vip.policy';
 import { TRANSACTION_CLIENT_REPOSITORY } from '../injection-tokens';
 import { InMemoryClientRepository } from './transaction-client/in-memory-client-repository';
 import { ITransactionClientRepository } from '../domain/transaction-client/transaction-client-repository.interface';
+import { DEFAULT_POLICY } from '../domain/calculator/policies/default.policy';
 
 describe('Calculate commission', () => {
   const NON_EUR_EXCHANGE_RATE = 5;
@@ -33,7 +34,10 @@ describe('Calculate commission', () => {
             highTurnoverPolicy: CommissionPolicy,
             vipPolicy: CommissionPolicy,
           ) => {
-            return new CommissionCalculator([highTurnoverPolicy, vipPolicy]);
+            return new CommissionCalculator(DEFAULT_POLICY, [
+              highTurnoverPolicy,
+              vipPolicy,
+            ]);
           },
           inject: [HighTurnoverPolicy, VIPPolicy],
         },
