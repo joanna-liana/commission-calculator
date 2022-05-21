@@ -1,3 +1,4 @@
+import fc from 'fast-check';
 import { sampleClient } from '../../../test/fixtures';
 import { InMemoryClientRepository } from '../../application/transaction-client/in-memory-client-repository';
 import { Euro } from '../money/Euro';
@@ -5,6 +6,7 @@ import { ITransactionClient } from '../transaction-client/ITransactionClient';
 import { CommissionCalculator } from './commission-calculator';
 import { DEFAULT_POLICY } from './policies/default.policy';
 import {
+  CommissionPolicy,
   DefaultPolicy,
   ICommissionPolicyParams,
 } from './policies/discounts/commission-policy';
@@ -25,6 +27,12 @@ const DEFAULT_PARAMS: ICommissionPolicyParams = {
 const getParams = (customParams: Partial<ICommissionPolicyParams> = {}) => ({
   ...DEFAULT_PARAMS,
   ...customParams,
+});
+
+const discountPolicyFactory = (discount: number) => ({
+  applyTo() {
+    return Promise.resolve(Euro.of(discount));
+  },
 });
 
 describe('Commission calculator', () => {
@@ -97,6 +105,46 @@ describe('Commission calculator', () => {
         );
       },
     );
+
+    it('[PROPERTY] given multiple rules, it returns the lowest commission', () => {
+      fc.assert(
+        fc.asyncProperty(fc.float(), fc.float(), async (amount, discount) => {
+          const defaultPolicy: DefaultPolicy = {
+            applyTo() {
+              return Promise.resolve(Euro.of(discount + 1));
+            },
+          };
+
+          const lowestPolicy = discountPolicyFactory(discount);
+          const midPolicy = discountPolicyFactory(discount + 10);
+          const highestPolicy = discountPolicyFactory(discount + 100);
+
+          const calculatorWithAllPolicies = new CommissionCalculator(
+            defaultPolicy,
+            [lowestPolicy, midPolicy, highestPolicy],
+          );
+
+          const calculatorWithLowestPolicy = new CommissionCalculator(
+            defaultPolicy,
+            [lowestPolicy],
+          );
+
+          const c1 = await calculatorWithAllPolicies.getCommission({
+            clientId: 1,
+            date: new Date(),
+            money: Euro.of(amount),
+          });
+
+          const c2 = await calculatorWithLowestPolicy.getCommission({
+            clientId: 1,
+            date: new Date(),
+            money: Euro.of(amount),
+          });
+
+          return c1.equals(c2);
+        }),
+      );
+    });
 
     // TODO: property-based test
     it.each([
