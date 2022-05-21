@@ -1,5 +1,8 @@
 import { Euro } from '../../money/Euro';
-import { IPolicy } from '../../../../core/domain/policy.interface';
+import {
+  IDefaultPolicy,
+  IPolicy,
+} from '../../../../core/domain/policy.interface';
 
 export interface ICommissionPolicyParams {
   money: Euro;
@@ -8,3 +11,5 @@ export interface ICommissionPolicyParams {
 }
 
 export type CommissionPolicy = IPolicy<ICommissionPolicyParams, Euro>;
+
+export type DefaultPolicy = IDefaultPolicy<ICommissionPolicyParams, Euro>;
