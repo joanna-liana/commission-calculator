@@ -1,7 +1,7 @@
 import { Inject } from '@nestjs/common';
-import { TRANSACTION_CLIENT_REPOSITORY } from '../../../injection-tokens';
-import { Euro } from '../../money/Euro';
-import { ITransactionClientRepository } from '../../transaction-client/transaction-client-repository.interface';
+import { TRANSACTION_CLIENT_REPOSITORY } from '../../../../injection-tokens';
+import { Euro } from '../../../money/Euro';
+import { ITransactionClientRepository } from '../../../transaction-client/transaction-client-repository.interface';
 import { CommissionPolicy, ICommissionPolicyParams } from './commission-policy';
 
 export class HighTurnoverPolicy implements CommissionPolicy {

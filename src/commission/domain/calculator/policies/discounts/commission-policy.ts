@@ -1,8 +1,8 @@
-import { Euro } from '../../money/Euro';
+import { Euro } from '../../../money/Euro';
 import {
   IDefaultPolicy,
   IPolicy,
-} from '../../../../core/domain/policy.interface';
+} from '../../../../../core/domain/policy.interface';
 
 export interface ICommissionPolicyParams {
   money: Euro;

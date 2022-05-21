@@ -3,12 +3,12 @@ import {
   CommissionPolicy,
   DefaultPolicy,
   ICommissionPolicyParams,
-} from './policies/commission-policy';
+} from './policies/discounts/commission-policy';
 
 export class CommissionCalculator {
   constructor(
-    private readonly policies: CommissionPolicy[] = [],
     private readonly defaultPolicy: DefaultPolicy,
+    private readonly policies: CommissionPolicy[] = [],
   ) {}
   async getCommission(params: ICommissionPolicyParams): Promise<Euro> {
     const allPolicies = [...this.policies, this.defaultPolicy];
