@@ -3,7 +3,10 @@ import { InMemoryClientRepository } from '../../application/transaction-client/i
 import { Euro } from '../money/Euro';
 import { ITransactionClient } from '../transaction-client/ITransactionClient';
 import { CommissionCalculator } from './commission-calculator';
-import { ICommissionPolicyParams } from './policies/commission-policy';
+import {
+  DefaultPolicy,
+  ICommissionPolicyParams,
+} from './policies/commission-policy';
 import { HighTurnoverPolicy } from './policies/high-turnover.policy';
 import { VIPPolicy } from './policies/vip.policy';
 
@@ -16,6 +19,12 @@ const DEFAULT_PARAMS: ICommissionPolicyParams = {
   clientId: 1,
   date: new Date(),
   money: Euro.of(0),
+};
+
+const DEFAULT_POLICY: DefaultPolicy = {
+  applyTo() {
+    return Promise.resolve(Euro.of(0.05));
+  },
 };
 
 const getParams = (customParams: Partial<ICommissionPolicyParams> = {}) => ({
@@ -195,5 +204,62 @@ describe('Commission calculator', () => {
         expect(commission).toBeSameMoney(lowestCommission);
       },
     );
+
+    it('given the default rule is the lowest, ignore the discounts', async () => {
+      // given
+      const lowestCommission = Euro.of(0.01);
+
+      const defaultPolicy: DefaultPolicy = {
+        applyTo() {
+          return Promise.resolve(lowestCommission);
+        },
+      };
+
+      const calculator = new CommissionCalculator(
+        [
+          new HighTurnoverPolicy(clientRepository),
+          new VIPPolicy(clientRepository),
+        ],
+        defaultPolicy,
+      );
+
+      // when
+      const commission = await calculator.getCommission(
+        getParams({
+          money: Euro.of(10),
+        }),
+      );
+
+      // then
+      expect(commission).toBeSameMoney(lowestCommission);
+    });
+
+    it('Given a discount resulting in 0, then 0 commission should be returned', async () => {
+      // given
+      const zeroPolicy: DefaultPolicy = {
+        applyTo() {
+          return Promise.resolve(Euro.of(0));
+        },
+      };
+
+      const calculator = new CommissionCalculator(
+        [
+          new HighTurnoverPolicy(clientRepository),
+          new VIPPolicy(clientRepository),
+          zeroPolicy,
+        ],
+        DEFAULT_POLICY,
+      );
+
+      // when
+      const commission = await calculator.getCommission(
+        getParams({
+          money: Euro.of(10),
+        }),
+      );
+
+      // then
+      expect(commission).toBeSameMoney(Euro.of(0));
+    });
   });
 });
