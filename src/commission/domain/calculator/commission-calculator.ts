@@ -1,33 +1,26 @@
-import { ITransactionClient } from '../transaction-client/ITransactionClient';
 import { Euro } from '../money/Euro';
 import {
-  ClientCommissionPolicy,
-  HighTurnoverCommissionPolicy,
-  VIPCommissionPolicy,
-} from './policies';
-import { Optional } from '@nestjs/common';
+  CommissionPolicy,
+  DefaultPolicy,
+  ICommissionPolicyParams,
+} from './policies/discounts/commission-policy';
 
 export class CommissionCalculator {
   constructor(
-    @Optional()
-    private readonly policies: ClientCommissionPolicy[] = [
-      HighTurnoverCommissionPolicy,
-      VIPCommissionPolicy,
-    ],
+    private readonly defaultPolicy: DefaultPolicy,
+    private readonly policies: CommissionPolicy[] = [],
   ) {}
-  getCommission(money: Euro, client: ITransactionClient): Euro {
-    const commissions = this.policies
-      .map((p) => p(client))
-      .filter((commission) => commission !== null);
+  async getCommission(params: ICommissionPolicyParams): Promise<Euro> {
+    const allPolicies = [...this.policies, this.defaultPolicy];
 
-    return commissions.length
-      ? commissions.sort((a, b) => a.amount - b.amount)[0]
-      : this.calculateDefaultCommission(money);
-  }
+    const policyResults = await Promise.all(
+      allPolicies.map((p) => p.applyTo(params)),
+    );
 
-  private calculateDefaultCommission(money: Euro): Euro {
-    const baseCommission = (0.5 / 100) * money.amount;
+    const commissions = policyResults.filter(
+      (commission) => commission !== null,
+    );
 
-    return Euro.of(baseCommission > 0.5 ? baseCommission : 0.5);
+    return commissions.sort((a, b) => a.amount - b.amount)[0];
   }
 }

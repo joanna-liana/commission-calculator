@@ -1,63 +1,150 @@
 import fc from 'fast-check';
-
 import { sampleClient } from '../../../test/fixtures';
+import { InMemoryClientRepository } from '../../application/transaction-client/in-memory-client-repository';
 import { Euro } from '../money/Euro';
 import { ITransactionClient } from '../transaction-client/ITransactionClient';
 import { CommissionCalculator } from './commission-calculator';
-import { HighTurnoverCommissionPolicy, VIPCommissionPolicy } from './policies';
+import { DEFAULT_POLICY } from './policies/default.policy';
+import {
+  CommissionPolicy,
+  DefaultPolicy,
+  ICommissionPolicyParams,
+} from './policies/discounts/commission-policy';
+import { HighTurnoverPolicy } from './policies/discounts/high-turnover.policy';
+import { VIPPolicy } from './policies/discounts/vip.policy';
 
 const DEFAULT_CLIENT: ITransactionClient = sampleClient({
   isVIP: false,
   monthlyTurnover: 0,
 });
 
+const DEFAULT_PARAMS: ICommissionPolicyParams = {
+  clientId: 1,
+  date: new Date(),
+  money: Euro.of(0),
+};
+
+const getParams = (customParams: Partial<ICommissionPolicyParams> = {}) => ({
+  ...DEFAULT_PARAMS,
+  ...customParams,
+});
+
+const discountPolicyFactory = (discount: number) => ({
+  applyTo() {
+    return Promise.resolve(Euro.of(discount));
+  },
+});
+
 describe('Commission calculator', () => {
+  const clientRepository = new InMemoryClientRepository();
+
   describe('Base commission', () => {
-    const calculator = new CommissionCalculator([]);
+    const calculator = new CommissionCalculator(DEFAULT_POLICY);
 
     it.each([
       [100, 0.5],
       [1000, 5],
-    ])('returns the default commission of `0.5%`', (input, output) => {
-      expect(
-        calculator.getCommission(Euro.of(input), DEFAULT_CLIENT),
-      ).toBeSameMoney(Euro.of(output));
+    ])('returns the default commission of `0.5%`', async (input, output) => {
+      const params = getParams({
+        money: Euro.of(input),
+      });
+
+      expect(await calculator.getCommission(params)).toBeSameMoney(
+        Euro.of(output),
+      );
     });
 
-    it('does not return a default lower than `0.05€`', () => {
-      expect(
-        calculator.getCommission(Euro.of(1000), DEFAULT_CLIENT),
-      ).toBeSameMoney(Euro.of(5));
+    it('does not return a default lower than `0.05€`', async () => {
+      const params = getParams({
+        money: Euro.of(1000),
+      });
+
+      expect(await calculator.getCommission(params)).toBeSameMoney(Euro.of(5));
     });
   });
 
   describe('Discounts', () => {
-    it('returns a set commission of `0.05€` for VIP clients', () => {
-      const calculator = new CommissionCalculator([VIPCommissionPolicy]);
+    const params = getParams({
+      money: Euro.of(10),
+    });
 
-      expect(
-        calculator.getCommission(Euro.of(10), {
-          ...DEFAULT_CLIENT,
-          isVIP: true,
-        }),
-      ).toBeSameMoney(Euro.of(0.05));
+    it('returns a set commission of `0.05€` for VIP clients', async () => {
+      const calculator = new CommissionCalculator(DEFAULT_POLICY, [
+        new VIPPolicy(clientRepository),
+      ]);
+
+      const vipClient = {
+        ...DEFAULT_CLIENT,
+        isVIP: true,
+      };
+
+      await clientRepository.save(vipClient);
+
+      expect(await calculator.getCommission(params)).toBeSameMoney(
+        Euro.of(0.05),
+      );
     });
 
     it.each([1000, 1001])(
       'returns `0.03€` for high turnover clients - `1000.00€` (per month)',
-      (turnover) => {
-        const calculator = new CommissionCalculator([
-          HighTurnoverCommissionPolicy,
+      async (turnover) => {
+        const calculator = new CommissionCalculator(DEFAULT_POLICY, [
+          new HighTurnoverPolicy(clientRepository),
         ]);
 
-        expect(
-          calculator.getCommission(Euro.of(10), {
-            ...DEFAULT_CLIENT, //TODO: just one client type is checked
-            monthlyTurnover: Euro.of(turnover),
-          }),
-        ).toBeSameMoney(Euro.of(0.03));
+        //TODO: just one client type is checked
+        const highTurnoverClient = {
+          ...DEFAULT_CLIENT,
+          monthlyTurnover: Euro.of(turnover),
+        };
+
+        await clientRepository.save(highTurnoverClient);
+
+        expect(await calculator.getCommission(params)).toBeSameMoney(
+          Euro.of(0.03),
+        );
       },
     );
+
+    it('[PROPERTY] given multiple rules, it returns the lowest commission', () => {
+      fc.assert(
+        fc.asyncProperty(fc.float(), fc.float(), async (amount, discount) => {
+          const defaultPolicy: DefaultPolicy = {
+            applyTo() {
+              return Promise.resolve(Euro.of(discount + 1));
+            },
+          };
+
+          const lowestPolicy = discountPolicyFactory(discount);
+          const midPolicy = discountPolicyFactory(discount + 10);
+          const highestPolicy = discountPolicyFactory(discount + 100);
+
+          const calculatorWithAllPolicies = new CommissionCalculator(
+            defaultPolicy,
+            [lowestPolicy, midPolicy, highestPolicy],
+          );
+
+          const calculatorWithLowestPolicy = new CommissionCalculator(
+            defaultPolicy,
+            [lowestPolicy],
+          );
+
+          const c1 = await calculatorWithAllPolicies.getCommission({
+            clientId: 1,
+            date: new Date(),
+            money: Euro.of(amount),
+          });
+
+          const c2 = await calculatorWithLowestPolicy.getCommission({
+            clientId: 1,
+            date: new Date(),
+            money: Euro.of(amount),
+          });
+
+          return c1.equals(c2);
+        }),
+      );
+    });
 
     // TODO: property-based test
     it.each([
@@ -103,23 +190,42 @@ describe('Commission calculator', () => {
       ],
     ])(
       'given multiple rules, it returns the lowest commission',
-      (input, client, output) => {
-        const calculator = new CommissionCalculator([
-          VIPCommissionPolicy,
-          HighTurnoverCommissionPolicy,
+      async (input, client, output) => {
+        const calculator = new CommissionCalculator(DEFAULT_POLICY, [
+          new VIPPolicy(clientRepository),
+          new HighTurnoverPolicy(clientRepository),
         ]);
 
-        expect(calculator.getCommission(input, client)).toBeSameMoney(output);
+        await clientRepository.save(client);
+
+        expect(
+          await calculator.getCommission(
+            getParams({
+              money: input,
+            }),
+          ),
+        ).toBeSameMoney(output);
       },
     );
 
     it.each([
-      [[VIPCommissionPolicy, HighTurnoverCommissionPolicy]],
-      [[HighTurnoverCommissionPolicy, VIPCommissionPolicy]],
+      [
+        [
+          new VIPPolicy(clientRepository),
+          new HighTurnoverPolicy(clientRepository),
+        ],
+      ],
+      [
+        [
+          new HighTurnoverPolicy(clientRepository),
+          new VIPPolicy(clientRepository),
+        ],
+      ],
     ])(
-      'given multiple rules in any order, it returns the lowest commission',
-      (rules) => {
-        const calculator = new CommissionCalculator(rules);
+      'given multiple polcies in any order, it returns the lowest commission',
+      async (policies) => {
+        // given
+        const calculator = new CommissionCalculator(DEFAULT_POLICY, policies);
 
         const lowestCommission = Euro.of(0.03);
 
@@ -128,10 +234,69 @@ describe('Commission calculator', () => {
           monthlyTurnover: 100000,
         });
 
-        expect(
-          calculator.getCommission(Euro.of(10), lowestCommissionClient),
-        ).toBeSameMoney(lowestCommission);
+        await clientRepository.save(lowestCommissionClient);
+
+        // when
+        const commission = await calculator.getCommission(
+          getParams({
+            money: Euro.of(10),
+          }),
+        );
+
+        // then
+        expect(commission).toBeSameMoney(lowestCommission);
       },
     );
+
+    it('given the default rule is the lowest, ignore the discounts', async () => {
+      // given
+      const lowestCommission = Euro.of(0.01);
+
+      const defaultPolicy: DefaultPolicy = {
+        applyTo() {
+          return Promise.resolve(lowestCommission);
+        },
+      };
+
+      const calculator = new CommissionCalculator(defaultPolicy, [
+        new HighTurnoverPolicy(clientRepository),
+        new VIPPolicy(clientRepository),
+      ]);
+
+      // when
+      const commission = await calculator.getCommission(
+        getParams({
+          money: Euro.of(10),
+        }),
+      );
+
+      // then
+      expect(commission).toBeSameMoney(lowestCommission);
+    });
+
+    it('Given a discount resulting in 0, then 0 commission should be returned', async () => {
+      // given
+      const zeroPolicy: DefaultPolicy = {
+        applyTo() {
+          return Promise.resolve(Euro.of(0));
+        },
+      };
+
+      const calculator = new CommissionCalculator(DEFAULT_POLICY, [
+        new HighTurnoverPolicy(clientRepository),
+        new VIPPolicy(clientRepository),
+        zeroPolicy,
+      ]);
+
+      // when
+      const commission = await calculator.getCommission(
+        getParams({
+          money: Euro.of(10),
+        }),
+      );
+
+      // then
+      expect(commission).toBeSameMoney(Euro.of(0));
+    });
   });
 });
